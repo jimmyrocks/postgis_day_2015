@@ -1,0 +1,134 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="author" content="NPMap Team">
+  <meta name="description" content="A web mapping workshop given by the NPMap team at the 2014 ASPRS conference in Denver, Colorado.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.css"
+  rel="stylesheet">
+  <link href="//loc8.us/maptime2015/reveal.min.css" rel="stylesheet">
+  <link href="//loc8.us/maptime2015/nps.css" rel="stylesheet">
+  <link href="//loc8.us/maptime2015/zenburn.css" rel="stylesheet">
+  <title>PostgreSQL Materialized Views</title>
+</head>
+
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <section>
+        <img src="https://wiki.postgresql.org/skins/postgresql/slonik.png"/>
+        <h3 class="highlight">PostgreSQL Materialized Views</h3>
+        <h5>Making some PostgreSQL queries faster since September 2013</h5>
+        <h4>PostGIS Day: November 19, 2015</h4>
+        <h4>Jim McAndrew • <a href="http://twitter.com/jimmyrocks">@jimmyrocks</a> • <a href="mailto:jim@loc8.us">jim@loc8.us</a></h4>
+      </section>
+      <section>
+        <h2 class="highlight">What is a view?</h2>
+        <ul>
+          <li>Useful for displaying the <span class="highlight">same data</span> in different ways for different uses</li>
+          <li>Runs the <span class="highlight">same query</span> each time it is referenced</li>
+          <li><span class="highlight">Cannot have an index</span>. A view uses the indexes of the underlying tables</li>
+        </ul>
+      </section>
+      <section>
+        <h3 class="highlight">View Example: Basic Query</h3>
+        <img src="img/1_raw_table.png"/>
+      </section>
+      <section>
+        <h3 class="highlight">View Example: Transform</h3>
+        <img src="img/2_pre-view.png"/>
+      </section>
+      <section>
+        <h3 class="highlight">View Example: Create View</h3>
+<!-- HTML generated using hilite.me --><div style="background: #202020; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #6ab825; font-weight: bold">CREATE</span> <span style="color: #6ab825; font-weight: bold">VIEW</span>
+  <span style="color: #ed9d13">&quot;foursquare_description&quot;</span> <span style="color: #6ab825; font-weight: bold">AS</span>
+  <span style="color: #6ab825; font-weight: bold">SELECT</span>
+    <span style="color: #ed9d13">&quot;name&quot;</span><span style="color: #d0d0d0">,</span>
+    <span style="color: #6ab825; font-weight: bold">SUBSTRING</span><span style="color: #d0d0d0">(</span><span style="color: #ed9d13">&quot;description&quot;</span> <span style="color: #6ab825; font-weight: bold">FROM</span> <span style="color: #ed9d13">&#39;.+?&lt;/a&gt;- (.+$)&#39;</span><span style="color: #d0d0d0">)</span> <span style="color: #6ab825; font-weight: bold">AS</span> <span style="color: #ed9d13">&quot;description&quot;</span><span style="color: #d0d0d0">,</span>
+    <span style="color: #ed9d13">&quot;wkb_geometry&quot;</span>
+  <span style="color: #6ab825; font-weight: bold">FROM</span>
+    <span style="color: #ed9d13">&quot;foursquare&quot;</span><span style="color: #d0d0d0">;</span>
+</pre></div>
+             </section>
+      <section>
+        <h3 class="highlight">View Example: Query View</h3>
+        <img src="img/3_query_from_view.png"/>
+      </section>
+      <section>
+      <h2 class="highlight">What is a materialized view?</h2>
+        <ul>
+          <li>Materialized views in PostgreSQL use the rule system <span class="highlight">like views</span> do, but <span class="highlight">persist</span> the results in a table-like form</li>
+          <li>When a materialized view is referenced in a query, the <span class="highlight">data is returned directly from the materialized view</span></li>
+          <li>Materialized views <span class="highlight">can be indexed</span></li>
+        </ul>
+      </section>
+      <section>
+        <h3 class="highlight">Materialized View: Initial Query</h3>
+        <img src="img/4_filter_example.png"/>
+      </section>
+      <section>
+        <h3 class="highlight">Join Example</h3>
+        <img src="img/5_join_raw.png"/>
+      </section>
+
+
+      <section>
+        <h3 class="highlight">Materialized View: Create</h3>
+<!-- HTML generated using hilite.me --><div style="background: #202020; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #6ab825; font-weight: bold">CREATE</span> <span style="color: #d0d0d0">MATERIALIZED</span> <span style="color: #6ab825; font-weight: bold">VIEW</span> <span style="color: #d0d0d0">foursquare_beer</span> <span style="color: #6ab825; font-weight: bold">AS</span>
+<span style="color: #6ab825; font-weight: bold">SELECT</span>
+  <span style="color: #d0d0d0">foursquare.wkb_geometry</span>
+<span style="color: #6ab825; font-weight: bold">FROM</span>
+  <span style="color: #d0d0d0">foursquare</span>
+<span style="color: #6ab825; font-weight: bold">WHERE</span>
+  <span style="color: #d0d0d0">name</span> <span style="color: #6ab825; font-weight: bold">ilike</span> <span style="color: #ed9d13">&#39;%brew%&#39;</span> <span style="color: #6ab825; font-weight: bold">or</span> <span style="color: #d0d0d0">name</span> <span style="color: #6ab825; font-weight: bold">ilike</span> <span style="color: #ed9d13">&#39;%beer%&#39;</span><span style="color: #d0d0d0">;</span>
+</pre></div>
+
+      </section>
+      <section>
+        <h3 class="highlight">Materialized View: Add Index</h3>
+<!-- HTML generated using hilite.me --><div style="background: #202020; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #6ab825; font-weight: bold">CREATE</span> <span style="color: #6ab825; font-weight: bold">INDEX</span> <span style="color: #d0d0d0">idx_foursquare_beer_geom</span> <span style="color: #6ab825; font-weight: bold">ON</span> <span style="color: #d0d0d0">foursquare_beer</span> <span style="color: #6ab825; font-weight: bold">USING</span> <span style="color: #d0d0d0">GIST(wkb_geometry);</span>
+</pre></div>
+
+      </section>
+      <section>
+        <h3 class="highlight">Materialized View: Refresh</h3>
+<!-- HTML generated using hilite.me --><div style="background: #202020; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #d0d0d0">REFRESH</span> <span style="color: #d0d0d0">MATERIALIZED</span> <span style="color: #6ab825; font-weight: bold">VIEW</span> <span style="color: #d0d0d0">foursquare_beer</span> <span style="color: #6ab825; font-weight: bold">WITH</span> <span style="color: #6ab825; font-weight: bold">DATA</span><span style="color: #d0d0d0">;</span>
+</pre></div>
+
+      </section>
+      <section>
+        <h3 class="highlight">Materialized View: Initial Query</h3>
+        <img src="img/6_join_materialized_view.png"/>
+      </section>
+
+      <section>
+      </section>
+      </div>
+    </div>
+
+    <script src="//loc8.us/maptime2015/head.min.js"></script>
+    <script src="//loc8.us/maptime2015/reveal.js"></script>
+    <script>
+      Reveal.initialize(
+      {
+        center: false,
+        controls: true,
+        height: 700,
+        history: true,
+        overview: false,
+        progress: true,
+        theme: Reveal.getQueryHash().theme || 'nps',
+        transition: Reveal.getQueryHash().transition || 'linear',
+        width: 1100
+      });
+    </script>
+</body>
+
+</html>
+
