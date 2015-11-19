@@ -1,0 +1,1 @@
+# checkins_in_denver_neighborhoods_distinct.sql
